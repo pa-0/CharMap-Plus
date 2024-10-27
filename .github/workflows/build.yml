@@ -1,0 +1,94 @@
+name: .NET Core Desktop
+
+on:
+  workflow_dispatch:
+
+jobs:
+
+  build:
+
+    strategy:
+      matrix:
+        configuration: [Release]
+
+    runs-on: windows-latest 
+    env:
+      Solution_Name: "CharMap Plus.sln"
+      CODESIGN_PWD: ${{secrets.CODESIGN_PWD}}
+      CODESIGN_BASE64: ${{secrets.CODESIGN_B64}}
+      GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      REPOROOT: ${{github.WORKSPACE}}
+      REPO-TOKEN: ${{secrets.PAT_TOKEN}}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    # Install the .NET Core workload
+    - name: Install .NET Core
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 7.0.x
+
+    # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
+    - name: Setup MSBuild.exe
+      uses: microsoft/setup-msbuild@v2
+      with:
+        msbuild-architecture: x64
+
+    # Restore the application to populate the obj folder with RuntimeIdentifiers
+    - name: Restore the application
+      run: msbuild $env:Solution_Name /t:Restore /p:Configuration=$env:Configuration /p:Platform=x64
+      env:
+        Configuration: ${{ matrix.configuration }}
+
+    # Decode the base 64 encoded pfx and save the Signing_Certificate
+    - name: Decode the pfx
+      run: |
+        $pfx_cert_byte = [System.Convert]::FromBase64String("$env:CODESIGN_BASE64")
+        $certPath = Join-Path -Path $env:REPOROOT -ChildPath cr.pfx
+        [IO.File]::WriteAllBytes("$certPath", $pfx_cert_byte)
+        New-Item -Path $env:REPOROOT -Name "cm" -ItemType "directory"
+
+    - name: Create the app package
+      run: msbuild $env:Wap_Project_Path /p:Configuration=$env:Configuration /p:UapAppxPackageBuildMode=$env:Appx_Package_Build_Mode /p:PackageCertificateKeyFile=$env:REPOROOT\cr.pfx /p:PackageCertificatePassword=$env:CODESIGN_PWD /p:BaseOutputPath=$env:REPOROOT\cm\ /p:Platform=x64
+      env:
+        Appx_Package_Build_Mode: SideLoadOnly
+        Configuration: ${{ matrix.configuration }}
+
+    - name: Sign App and Remove the pfx
+      run: |
+        $securepwd = ConvertTo-SecureString "$env:CODESIGN_PWD" -AsPlainText -Force
+        $pfxpath = Join-Path -Path "$env:REPOROOT" -ChildPath cr.pfx
+        #$flags = "PersistKeySet"
+        #$folder = "Root"
+        #$store = "CurrentUser"
+        #Add-Type -AssemblyName System.Security
+        #$cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($pfxpath, $securepwd, $flags)
+        #$certstore = New-Object System.Security.Cryptography.X509Certificates.X509Store($folder, $store)
+        #$certstore.Open('ReadWrite')
+        #$certstore.Add($cert)
+        #$certstore.Close()
+        #Write-Output "Imported store certificate `"$pfxpath`" successfully."
+        $buffer = [IO.File]::ReadAllBytes("$pfxpath")
+        $cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::New($buffer, $env:CODESIGN_PWD)
+        $bins = Get-ChildItem -Path $env:REPOROOT\cm\* -Include *.exe,*.dll -Recurse
+        foreach ($bin in $bins){
+            Set-AuthenticodeSignature -HashAlgorithm SHA256 -Certificate $cert -TimestampServer http://timestamp.digicert.com -FilePath $bin
+            #signtool verify /pa "$bin"
+            Write-Output "$bin signed successfully"
+        }
+        Remove-Item -Path $env:REPOROOT\cr.pfx
+        Compress-Archive -Path $env:REPOROOT\cm -Destination $env:REPOROOT\charmap.zip
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: charmap
+        path: ${{env.REPOROOT}}/cm
+
+    - name: Create Release
+      run: gh release create v1.0.0 "$env:REPOROOT\charmap.zip"
+      env:
+        repo-token: ${{secrets.PAT_TOKEN}}
