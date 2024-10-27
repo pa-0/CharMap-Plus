@@ -31,6 +31,15 @@ jobs:
       with:
         dotnet-version: 7.0.x
 
+    - name: Install Windows SDK
+    # You may pin to the exact commit or the version.
+    # uses: Lamparter/Install-WindowsSdk@f0cc45f4968edf1472331d4b8cdd22c063dbb11e
+      uses: Lamparter/Install-WindowsSdk@v1.0.0
+      with:
+        # The build number of the Windows SDK to install.
+        buildNumber: 10.0.10240.0
+          
+
     # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
     - name: Setup MSBuild.exe
       uses: microsoft/setup-msbuild@v2
