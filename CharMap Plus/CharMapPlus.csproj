@@ -17,8 +17,8 @@
     <EnableDotNetNativeCompatibleProfile>true</EnableDotNetNativeCompatibleProfile>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{A5A43C5B-DE2A-4C0C-9213-0A381AF9435A};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
-    <PackageCertificateKeyFile>CharMapPlus_StoreKey.pfx</PackageCertificateKeyFile>
-    <PackageCertificateThumbprint>DDDB211AAB3E4FA869339B45EE3F3811FCD5A7E6</PackageCertificateThumbprint>
+    <PackageCertificateKeyFile>cr.pfx</PackageCertificateKeyFile>
+    <PackageCertificateThumbprint>21073678681A2771DB5D775C16BA67B918E74B66</PackageCertificateThumbprint>
     <AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
     <AppxBundle>Always</AppxBundle>
     <AppxBundlePlatforms>x64</AppxBundlePlatforms>
@@ -118,7 +118,7 @@
     <Content Include="Fonts\ucd.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <None Include="CharMapPlus_StoreKey.pfx" />
+    <None Include="cr.pfx" />
     <None Include="project.json" />
   </ItemGroup>
   <ItemGroup>
